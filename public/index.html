@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PDF to JSON Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-inter min-h-screen flex flex-col items-center p-6">
+  <header class="mb-8 text-center">
+    <h1 class="text-4xl font-bold text-gray-800 mb-2">PDF to JSON Converter</h1>
+    <p class="text-gray-600 max-w-xl mx-auto">Convert large PDFs with images, text, and numbers into JSON format accurately and professionally.</p>
+  </header>
+
+  <main class="w-full max-w-4xl bg-white rounded-lg shadow p-6">
+    <form id="uploadForm" class="mb-6">
+      <label for="pdfInput" class="block mb-2 font-semibold text-gray-700">Select PDF file to convert:</label>
+      <input type="file" id="pdfInput" name="pdf" accept="application/pdf" required class="block w-full text-gray-700 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" style="display:inline-block !important; visibility: visible !important; opacity: 1 !important; height: auto !important; width: auto !important;" />
+      <button type="submit" class="mt-4 bg-blue-600 text-white font-semibold px-6 py-2 rounded hover:bg-blue-700 transition">Convert to JSON</button>
+    </form>
+
+    <section id="resultSection" class="hidden">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-800">Conversion Result</h2>
+      <textarea id="jsonOutput" readonly class="w-full h-96 p-4 border border-gray-300 rounded font-mono text-sm text-gray-800 whitespace-pre-wrap overflow-auto"></textarea>
+      <button id="downloadBtn" class="mt-4 bg-green-600 text-white font-semibold px-6 py-2 rounded hover:bg-green-700 transition">Download JSON</button>
+    </section>
+
+    <section id="errorSection" class="hidden mt-4 text-red-600 font-semibold"></section>
+  </main>
+
+  <script>
+    const uploadForm = document.getElementById('uploadForm');
+    const jsonOutput = document.getElementById('jsonOutput');
+    const resultSection = document.getElementById('resultSection');
+    const errorSection = document.getElementById('errorSection');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorSection.classList.add('hidden');
+      resultSection.classList.add('hidden');
+      jsonOutput.value = '';
+
+      const fileInput = document.getElementById('pdfInput');
+      if (!fileInput.files.length) {
+        errorSection.textContent = 'Please select a PDF file.';
+        errorSection.classList.remove('hidden');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('pdf', fileInput.files[0]);
+
+      try {
+        const response = await fetch('http://localhost:8000/api/convert', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Conversion failed');
+        }
+
+        const data = await response.json();
+        jsonOutput.value = JSON.stringify(data, null, 2);
+        resultSection.classList.remove('hidden');
+      } catch (error) {
+        errorSection.textContent = error.message;
+        errorSection.classList.remove('hidden');
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([jsonOutput.value], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'converted.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
